@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Sisyphus
 Plugin URI: https://github.com/bhays/gravity-forms-sisyphus
 Description: Persist your form's data in a browser's Local Storage and never loose them on occasional tabs closing, browser crashes and other disasters with Sisyphus.
-Version: 2.0.1
+Version: 2.1.0
 Author: Ben Hays
 Author URI: http://benhays.com
 
@@ -70,6 +70,9 @@ class GFSisyphus {
 
 				// Add sisyphus script to page
 				add_action('gform_register_init_scripts', array('GFSisyphus', 'add_page_script'));
+
+				// Add support for gravityform list field
+				add_filter('gform_column_input_content', array('GFSisyphus', 'display_list_content'), 10, 6);
 			}
 		}
 	}
@@ -78,12 +81,52 @@ class GFSisyphus {
 	{
 		self::log_debug('Adding page script to '.$form['id']);
 
-		$script = "(function($){" .
-			"$('#gform_".$form['id']."').sisyphus();".
-			"})(jQuery);";
+		$form_id = $form['id'];
+		$form_state = rgpost("state_{$form_id}");
+
+		$resume_token = $_GET['gf_token'] or $resume_token = rgpost( 'gform_resume_token' ) or $resume_token = $_GET['edit'];
+
+		$script = "(function($) {
+	        var urlParams = new URLSearchParams(window.location.search);
+	        var hasFormState = Boolean('{$form_state}');
+	        var resumeToken = '{$resume_token}';
+	        var savedToken =  localStorage.getItem('resume_token');
+	        
+	        // Allow autopopulate only when resume token matches and has no form state (i.e initial state)
+	        var autopopulate = resumeToken === savedToken && hasFormState === false;
+	
+	        $(document).ready(function() {
+	            $('#gform_{$form_id} input, #gform_{$form_id} select, #gform_{$form_id} textarea').change(function(e){
+	                localStorage.setItem('resume_token', resumeToken);
+	            });
+	        });    
+	        
+	        var form = $('#gform_{$form_id}').sisyphus({
+	            onBeforeRestore: function(){return autopopulate}
+	        });
+	            
+	        // sync current form data to local storage
+	        form.manuallyReleaseData();
+	        form.saveAllData();
+        })(jQuery);";
+
 		GFFormDisplay::add_init_script($form['id'], 'gravity-forms-js-validate', GFFormDisplay::ON_PAGE_RENDER, $script);
 		return $form;
 	}
+
+	// Add input id to gravityform list field
+	public static function display_list_content($input, $input_info, $field, $column, $value, $form_id) {
+		if (!($field->type == 'list')) return $input;
+
+		// add input id if not yet set
+		if (!preg_match('/ id=/', $input)) {
+			$id    = "input_{$form_id}_{$field->id}_cell{$column}";
+			$input = str_replace( "<input", "<input id='{$id}'", $input );
+		}
+
+		return $input;
+	}
+
 	public static function add_form_setting( $settings, $form )
 	{
 		$current = rgar($form, 'enable_sisyphus');
