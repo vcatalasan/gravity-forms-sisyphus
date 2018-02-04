@@ -66,6 +66,7 @@ class GFSisyphus {
 			// Check form for enabled sisyphus
 			if( array_key_exists('enable_sisyphus', $form) && $form['enable_sisyphus'] == 1 )
 			{
+                wp_enqueue_script('localstorage', plugins_url( 'js/jstorage.min.js' , __FILE__ ));
 				wp_enqueue_script('sisyphus', plugins_url( 'js/sisyphus.min.js' , __FILE__ ), array('jquery'),self::$sisyphus_version);
 
 				// Add sisyphus script to page
@@ -87,27 +88,30 @@ class GFSisyphus {
 		$resume_token = $_GET['gf_token'] or $resume_token = rgpost( 'gform_resume_token' ) or $resume_token = $_GET['edit'];
 
 		$script = "(function($) {
-	        var urlParams = new URLSearchParams(window.location.search);
+	        var form = $('#gform_{$form_id}').sisyphus({
+	            onBeforeRestore: function(){return false}
+	        });
+
 	        var hasFormState = Boolean('{$form_state}');
 	        var resumeToken = '{$resume_token}';
-	        var savedToken =  localStorage.getItem('resume_token');
+	        var savedToken =  form.browserStorage.get('resume_token');
 	        
-	        // Allow autopopulate only when resume token matches and has no form state (i.e initial state)
-	        var autopopulate = resumeToken === savedToken && hasFormState === false;
+	        // Allow restore from local storage only when resume token matches and has no form state (i.e initial state)
+	        var restoreAllData = resumeToken === savedToken && hasFormState === false;
 	
 	        $(document).ready(function() {
 	            $('#gform_{$form_id} input, #gform_{$form_id} select, #gform_{$form_id} textarea').change(function(e){
-	                localStorage.setItem('resume_token', resumeToken);
+	                form.browserStorage.set('resume_token', resumeToken);
 	            });
 	        });    
 	        
-	        var form = $('#gform_{$form_id}').sisyphus({
-	            onBeforeRestore: function(){return autopopulate}
-	        });
-	            
-	        // sync current form data to local storage
-	        form.manuallyReleaseData();
-	        form.saveAllData();
+	        if (restoreAllData) {
+	            form.restoreAllData();
+	        } else {        
+                // sync current form data to local storage
+                form.manuallyReleaseData();
+                form.saveAllData();
+	        }
         })(jQuery);";
 
 		GFFormDisplay::add_init_script($form['id'], 'gravity-forms-js-validate', GFFormDisplay::ON_PAGE_RENDER, $script);
