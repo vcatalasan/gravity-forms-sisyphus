@@ -85,7 +85,10 @@ class GFSisyphus {
 		$form_id = $form['id'];
 		$form_state = rgpost("state_{$form_id}");
 
-		$resume_token = $_GET['gf_token'] or $resume_token = rgpost( 'gform_resume_token' ) or $resume_token = $_GET['edit'];
+		// get resume token from 'Save and Continue' (incomplete application)
+		$resume_token = $_GET['gf_token'] or $resume_token = rgpost( 'gform_resume_token' )
+			or $resume_token = $_GET['edit']    // gravity view edit entry
+			or $resume_token = '__new__';       // new form
 
 		$script = "(function($) {
 	        var form = $('#gform_{$form_id}').sisyphus({
@@ -108,9 +111,10 @@ class GFSisyphus {
 	        if (restoreAllData) {
 	            form.restoreAllData();
 	        } else {        
-                // sync current form data to local storage
+                // sync new form data to local storage
                 form.manuallyReleaseData();
                 form.saveAllData();
+                form.browserStorage.set('resume_token', resumeToken);
 	        }
         })(jQuery);";
 
