@@ -90,36 +90,14 @@ class GFSisyphus {
 			or $resume_token = $_GET['edit']    // gravity view edit entry
 			or $resume_token = '__new__';       // new form
 
-		$script = "(function($) {
-	        var form = $('#gform_{$form_id}').sisyphus({
-	            onBeforeRestore: function(){return false}
-	        });
+        $gform_vars = array(
+            'form_id' => $form_id,
+            'form_state' => $form_state,
+            'resume_token' => $resume_token
+        );
 
-	        var hasFormState = Boolean('{$form_state}');
-	        var resumeToken = '{$resume_token}';
-	        var savedToken =  form.browserStorage.get('resume_token');
-	        
-	        // Allow restore from local storage only when resume token matches and has no form state (i.e initial state)
-	        var restoreAllData = resumeToken === savedToken && hasFormState === false;
-	
-	        $(document).ready(function() {
-	            $('#gform_{$form_id} input, #gform_{$form_id} select, #gform_{$form_id} textarea').change(function(e){
-	                form.browserStorage.set('resume_token', resumeToken);
-	            });
-	        });    
-	        
-	        if (restoreAllData) {
-	            form.restoreAllData();
-	        } else {        
-                // sync new form data to local storage
-                form.manuallyReleaseData();
-                form.saveAllData();
-                form.browserStorage.set('resume_token', resumeToken);
-	        }
-        })(jQuery);";
-
-		GFFormDisplay::add_init_script($form['id'], 'gravity-forms-js-validate', GFFormDisplay::ON_PAGE_RENDER, $script);
-		return $form;
+        wp_enqueue_script('gform-scripts', plugins_url( 'js/gform-scripts.js' , __FILE__ ));
+        wp_localize_script( 'gform-scripts', 'gform_vars', $gform_vars);
 	}
 
 	// Reset input id to gravityform list field to have a unique id required to autosave by Sisyphus
