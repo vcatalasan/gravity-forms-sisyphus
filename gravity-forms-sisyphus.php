@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Sisyphus
 Plugin URI: https://github.com/bhays/gravity-forms-sisyphus
 Description: Persist your form's data in a browser's Local Storage and never loose them on occasional tabs closing, browser crashes and other disasters with Sisyphus.
-Version: 2.1.0
+Version: 2.1.1
 Author: Ben Hays
 Author URI: http://benhays.com
 
@@ -73,7 +73,7 @@ class GFSisyphus {
 				add_action('gform_register_init_scripts', array('GFSisyphus', 'add_page_script'));
 
 				// Add support for gravityform list field
-				add_filter('gform_column_input_content', array('GFSisyphus', 'display_list_content'), 10, 6);
+				add_filter('gform_column_input_content', array('GFSisyphus', 'reset_list_column_input_id'), 10, 6);
 			}
 		}
 	}
@@ -122,15 +122,27 @@ class GFSisyphus {
 		return $form;
 	}
 
-	// Add input id to gravityform list field
-	public static function display_list_content($input, $input_info, $field, $column, $value, $form_id) {
+	// Reset input id to gravityform list field to have a unique id required to autosave by Sisyphus
+	public static function reset_list_column_input_id($input, $input_info, $field, $column, $value, $form_id) {
 		if (!($field->type == 'list')) return $input;
+
+		// since gf list field is not using unique id for each cell input, we're generating one
+        static $cell = array();
+
+        $cell[ $field->id ] += 1;
+
+        // new input id
+        $id = "input_{$form_id}_{$field->id}_cell{$cell[$field->id]}";
 
 		// add input id if not yet set
 		if (!preg_match('/ id=/', $input)) {
-			$id    = "input_{$form_id}_{$field->id}_cell{$column}";
 			$input = str_replace( "<input", "<input id='{$id}'", $input );
-		}
+		} else {
+		    // replace existing id
+            $matches = array();
+            preg_match("/id='([^']+)'/", $input,$matches);
+            $input = str_replace( $matches[1], $id, $input );
+        }
 
 		return $input;
 	}
