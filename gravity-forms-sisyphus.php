@@ -3,7 +3,7 @@
 Plugin Name: Gravity Forms Sisyphus
 Plugin URI: https://github.com/bhays/gravity-forms-sisyphus
 Description: Persist your form's data in a browser's Local Storage and never loose them on occasional tabs closing, browser crashes and other disasters with Sisyphus.
-Version: 2.1.1
+Version: 2.1.2
 Author: Ben Hays
 Author URI: http://benhays.com
 
